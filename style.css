@@ -130,7 +130,7 @@ a {
 }
 
 .btn:hover {
-  background: var(--primary-dark);
+  background: var(--accent-2);
   transform: translateY(-2px);
 }
 
@@ -176,7 +176,7 @@ a {
   border-radius: var(--radius);
   padding: 1.5rem;
   box-shadow: var(--shadow);
-  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s, color 0.2s;
 }
 
 .skill-card {
@@ -184,11 +184,6 @@ a {
   font-weight: 600;
   color: var(--primary);
   background: linear-gradient(135deg, #f3f1ff 0%, #ffffff 100%);
-}
-
-.skill-card:nth-child(even) {
-  background: linear-gradient(135deg, #e0fbfa 0%, #ffffff 100%);
-  color: #00a8a3;
 }
 
 .project-card h3, .cert-card h3 {
@@ -202,18 +197,21 @@ a {
   font-size: 0.95rem;
 }
 
-.project-card {
+.project-card,
+.cert-card {
   border-top: 4px solid var(--primary);
 }
 
-.cert-card {
-  border-top: 4px solid var(--accent-2);
+.skill-card:hover,
+.project-card:hover,
+.cert-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 28px rgba(0, 206, 201, 0.2);
+  border-color: var(--accent-2);
 }
 
-.skill-card:hover, .project-card:hover, .cert-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 28px rgba(108, 92, 231, 0.15);
-  border-color: var(--primary);
+.skill-card:hover {
+  color: var(--accent-2);
 }
 
 /* FOOTER */
