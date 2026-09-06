@@ -270,7 +270,7 @@ footer {
   }
 }
 
-/* Progressive enhancement: container queries (mas advanced pa sa @media) */
+
 .projects-grid, .certs-grid, .skills-grid {
   container-type: inline-size;
 }
@@ -283,14 +283,14 @@ footer {
   }
 }
 
-/* Fallback para sa lumang browsers na walang backdrop-filter support */
+
 @supports not (backdrop-filter: blur(8px)) {
   .navbar {
     background: var(--surface);
   }
 }
 
-/* Reduced motion — para sa users/browsers na naka-enable ng "reduce motion" setting */
+
 @media (prefers-reduced-motion: reduce) {
   .hero {
     animation: none;
