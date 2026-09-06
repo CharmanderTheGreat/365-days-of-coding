@@ -46,7 +46,7 @@ a {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.2rem 5vw;
+  padding: clamp(0.8rem, 2vw, 1.2rem) clamp(1.2rem, 5vw, 3rem);
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--border);
@@ -56,35 +56,44 @@ a {
 .logo {
   font-family: 'Poppins', sans-serif;
   font-weight: 700;
+  font-size: clamp(0.95rem, 2vw, 1.1rem);
   color: var(--primary);
 }
 
 .nav-links {
   display: flex;
-  gap: clamp(1rem, 3vw, 2rem);
+  gap: clamp(0.8rem, 2.5vw, 2rem);
 }
 
 .nav-links a {
   color: var(--text);
   font-weight: 500;
-  transition: color 0.2s;
+  font-size: clamp(0.85rem, 1.5vw, 1rem);
+  padding: 0.4rem 0.2rem;
+  border-bottom: 2px solid transparent;
+  transition: color 0.2s, border-color 0.2s;
 }
 
 .nav-links a:hover {
   color: var(--primary);
+  border-color: var(--primary);
 }
 
 .nav-toggle {
   display: none;
   background: none;
   border: none;
-  font-size: 1.5rem;
+  font-size: clamp(1.3rem, 3vw, 1.5rem);
   cursor: pointer;
   color: var(--text);
 }
 
 /* HERO */
 .hero {
+  min-height: 60dvh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   text-align: center;
   padding: clamp(4rem, 10vw, 7rem) 5vw;
   background: linear-gradient(135deg, #ede9ff 0%, #ffe8e2 50%, #e0fbfa 100%);
@@ -236,13 +245,18 @@ footer {
     left: 0;
     right: 0;
     background: var(--surface);
-    padding: 1rem 2rem;
+    padding: 1rem 5vw;
     gap: 1rem;
     border-bottom: 1px solid var(--border);
   }
 
   .nav-links.active {
     display: flex;
+  }
+
+  .nav-links a {
+    border-bottom: none;
+    padding: 0.6rem 0;
   }
 }
 
@@ -253,5 +267,35 @@ footer {
 
   .btn {
     width: 100%;
+  }
+}
+
+/* Progressive enhancement: container queries (mas advanced pa sa @media) */
+.projects-grid, .certs-grid, .skills-grid {
+  container-type: inline-size;
+}
+
+@supports (container-type: inline-size) {
+  @container (max-width: 500px) {
+    .project-card, .cert-card, .skill-card {
+      padding: 1rem;
+    }
+  }
+}
+
+/* Fallback para sa lumang browsers na walang backdrop-filter support */
+@supports not (backdrop-filter: blur(8px)) {
+  .navbar {
+    background: var(--surface);
+  }
+}
+
+/* Reduced motion — para sa users/browsers na naka-enable ng "reduce motion" setting */
+@media (prefers-reduced-motion: reduce) {
+  .hero {
+    animation: none;
+  }
+  html {
+    scroll-behavior: auto;
   }
 }
