@@ -3,7 +3,7 @@
 ## January — Web Dev Foundations
 1. [X] [Personal portfolio site (HTML/CSS/JS)](https://github.com/CharmanderTheGreat/Personal-portfolio-site--HTML-CSS-JS-.git)
 2. [X] [Responsive navbar component](https://github.com/CharmanderTheGreat/Responsive-navbar-component.git)
-3. [ ] [To-do list app (vanilla JS)](#)
+3. [ ] [To-do list app (vanilla JS)](https://github.com/CharmanderTheGreat/To-do-list-app-vanilla-JS-)
 4. [ ] [Markdown-to-HTML converter](#)
 5. [ ] [CSS Grid photo gallery](#)
 6. [ ] [Landing page clone (practice)](#)
