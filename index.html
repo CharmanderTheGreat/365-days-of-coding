@@ -108,6 +108,63 @@
     outline-offset: 2px;
   }
 
+  .toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .filters {
+    display: flex;
+    gap: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 3px;
+  }
+
+  .filter-btn {
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 6px 12px;
+    border-radius: 7px;
+    cursor: pointer;
+  }
+
+  .filter-btn.is-active {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .filter-btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .clear-completed {
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: var(--font-body);
+    font-size: 13px;
+    cursor: pointer;
+    padding: 6px 4px;
+    white-space: nowrap;
+  }
+
+  .clear-completed:hover { color: var(--danger); }
+
+  .clear-completed:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+
   .task-list {
     list-style: none;
     margin: 0;
@@ -144,6 +201,21 @@
   .task-item--completed .task-item__text {
     color: var(--text-muted);
     text-decoration: line-through;
+  }
+
+  .task-item__edit-input {
+    flex: 1;
+    font-family: var(--font-body);
+    font-size: 15px;
+    color: var(--text);
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    padding: 4px 8px;
+    background: var(--surface);
+  }
+
+  .task-item__edit-input:focus {
+    outline: none;
   }
 
   .task-item__delete {
@@ -193,6 +265,15 @@
       </button>
     </form>
 
+    <div class="toolbar">
+      <div class="filters" id="filters" role="group" aria-label="Filter tasks">
+        <button type="button" class="filter-btn is-active" data-filter="all" aria-pressed="true">All</button>
+        <button type="button" class="filter-btn" data-filter="active" aria-pressed="false">Active</button>
+        <button type="button" class="filter-btn" data-filter="completed" aria-pressed="false">Completed</button>
+      </div>
+      <button type="button" class="clear-completed" id="clearCompletedBtn">Clear completed</button>
+    </div>
+
     <ul class="task-list" id="taskList" aria-live="polite">
       <!-- tasks are rendered here -->
     </ul>
@@ -206,7 +287,7 @@
   'use strict';
 
   /* ------------------------------------------------------------ */
-  /* Constants / DOM refs                                         */
+  /* Constants / DOM refs                                          */
   /* ------------------------------------------------------------ */
 
   const STORAGE_KEY = 'todo-app:tasks';
@@ -216,9 +297,11 @@
   const taskList = document.getElementById('taskList');
   const taskCounter = document.getElementById('taskCounter');
   const emptyState = document.getElementById('emptyState');
+  const filters = document.getElementById('filters');
+  const clearCompletedBtn = document.getElementById('clearCompletedBtn');
 
   /* ------------------------------------------------------------ */
-  /* Data layer                                                   */
+  /* Data layer                                                     */
   /* ------------------------------------------------------------ */
   /*
     Task shape: { id, text, completed, createdAt }
@@ -227,6 +310,7 @@
   */
 
   let tasks = loadTasks();
+  let currentFilter = 'all'; // 'all' | 'active' | 'completed'
 
   function loadTasks() {
     try {
@@ -284,8 +368,30 @@
     render();
   }
 
+  function editTask(id, newText) {
+    const trimmed = newText.trim();
+    if (!trimmed) return;
+    const task = tasks.find((t) => t.id === id);
+    if (!task) return;
+    task.text = trimmed;
+    saveTasks();
+    render();
+  }
+
+  function clearCompleted() {
+    tasks = tasks.filter((t) => !t.completed);
+    saveTasks();
+    render();
+  }
+
+  function getFilteredTasks() {
+    if (currentFilter === 'active') return tasks.filter((t) => !t.completed);
+    if (currentFilter === 'completed') return tasks.filter((t) => t.completed);
+    return tasks;
+  }
+
   /* ------------------------------------------------------------ */
-  /* Rendering                                                    */
+  /* Rendering                                                      */
   /* ------------------------------------------------------------ */
 
   function createTaskElement(task) {
@@ -323,17 +429,29 @@
   }
 
   function render() {
+    const visibleTasks = getFilteredTasks();
+
     taskList.innerHTML = '';
     const fragment = document.createDocumentFragment();
-    tasks.forEach((task) => fragment.appendChild(createTaskElement(task)));
+    visibleTasks.forEach((task) => fragment.appendChild(createTaskElement(task)));
     taskList.appendChild(fragment);
 
-    emptyState.classList.toggle('empty-state--visible', tasks.length === 0);
+    if (tasks.length === 0) {
+      emptyState.textContent = 'Nothing here yet. Add your first task above.';
+      emptyState.classList.add('empty-state--visible');
+    } else if (visibleTasks.length === 0) {
+      emptyState.textContent = `No ${currentFilter} tasks.`;
+      emptyState.classList.add('empty-state--visible');
+    } else {
+      emptyState.classList.remove('empty-state--visible');
+    }
+
+    clearCompletedBtn.disabled = !tasks.some((t) => t.completed);
     updateCounter();
   }
 
   /* ------------------------------------------------------------ */
-  /* Events                                                       */
+  /* Events                                                         */
   /* ------------------------------------------------------------ */
 
   taskForm.addEventListener('submit', (e) => {
@@ -354,6 +472,62 @@
       deleteTask(id);
     }
   });
+
+  taskList.addEventListener('dblclick', (e) => {
+    if (!e.target.matches('.task-item__text')) return;
+    const li = e.target.closest('.task-item');
+    const task = tasks.find((t) => t.id === li.dataset.id);
+    if (task) enterEditMode(li, task);
+  });
+
+  function enterEditMode(li, task) {
+    const span = li.querySelector('.task-item__text');
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'task-item__edit-input';
+    input.maxLength = 120;
+    input.value = task.text;
+    li.replaceChild(input, span);
+    input.focus();
+    input.select();
+
+    let cancelled = false;
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        input.blur();
+      } else if (e.key === 'Escape') {
+        cancelled = true;
+        render();
+      }
+    });
+
+    input.addEventListener('blur', () => {
+      if (cancelled) return;
+      const newText = input.value.trim();
+      if (newText) {
+        editTask(task.id, newText);
+      } else {
+        render(); // revert: no empty task text allowed
+      }
+    });
+  }
+
+  filters.addEventListener('click', (e) => {
+    if (!e.target.matches('.filter-btn')) return;
+    currentFilter = e.target.dataset.filter;
+
+    filters.querySelectorAll('.filter-btn').forEach((btn) => {
+      const isActive = btn.dataset.filter === currentFilter;
+      btn.classList.toggle('is-active', isActive);
+      btn.setAttribute('aria-pressed', String(isActive));
+    });
+
+    render();
+  });
+
+  clearCompletedBtn.addEventListener('click', clearCompleted);
 
   /* ------------------------------------------------------------ */
   /* Init                                                         */
