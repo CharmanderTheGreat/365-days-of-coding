@@ -33,7 +33,7 @@
 30. [ ] [Shopping cart logic (frontend)](#)
 31. [ ] [Portfolio v2 (add animations/GSAP)](#)
 
-## February — Backend & APIs
+## October — Backend & APIs
 32. [ ] [REST API for a library system (Flask)](#)
 33. [ ] [JWT authentication service](#)
 34. [ ] [User registration/login API](#)
