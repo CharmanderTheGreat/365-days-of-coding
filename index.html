@@ -101,6 +101,13 @@
 
   .task-form__submit:hover { background: var(--accent-hover); }
 
+  .form-error {
+    color: var(--danger);
+    font-size: 13px;
+    margin: -14px 0 16px;
+    min-height: 16px;
+  }
+
   .task-form__submit:focus-visible,
   .task-item__checkbox:focus-visible,
   .task-item__delete:focus-visible {
@@ -265,6 +272,8 @@
       </button>
     </form>
 
+    <p class="form-error" id="formError" aria-live="polite"></p>
+
     <div class="toolbar">
       <div class="filters" id="filters" role="group" aria-label="Filter tasks">
         <button type="button" class="filter-btn is-active" data-filter="all" aria-pressed="true">All</button>
@@ -287,10 +296,11 @@
   'use strict';
 
   /* ------------------------------------------------------------ */
-  /* Constants / DOM refs                                         */
+  /* Constants / DOM refs                                          */
   /* ------------------------------------------------------------ */
 
   const STORAGE_KEY = 'todo-app:tasks';
+  const FILTER_STORAGE_KEY = 'todo-app:filter';
 
   const taskForm = document.getElementById('taskForm');
   const taskInput = document.getElementById('taskInput');
@@ -299,9 +309,10 @@
   const emptyState = document.getElementById('emptyState');
   const filters = document.getElementById('filters');
   const clearCompletedBtn = document.getElementById('clearCompletedBtn');
+  const formError = document.getElementById('formError');
 
   /* ------------------------------------------------------------ */
-  /* Data layer                                                   */
+  /* Data layer                                                     */
   /* ------------------------------------------------------------ */
   /*
     Task shape: { id, text, completed, createdAt }
@@ -310,7 +321,7 @@
   */
 
   let tasks = loadTasks();
-  let currentFilter = 'all'; // 'all' | 'active' | 'completed'
+  let currentFilter = loadFilter(); // 'all' | 'active' | 'completed'
 
   function loadTasks() {
     try {
@@ -335,6 +346,24 @@
     }
   }
 
+  function loadFilter() {
+    const valid = ['all', 'active', 'completed'];
+    try {
+      const saved = localStorage.getItem(FILTER_STORAGE_KEY);
+      return valid.includes(saved) ? saved : 'all';
+    } catch (err) {
+      return 'all';
+    }
+  }
+
+  function saveFilter() {
+    try {
+      localStorage.setItem(FILTER_STORAGE_KEY, currentFilter);
+    } catch (err) {
+      console.error('Failed to save filter to localStorage:', err);
+    }
+  }
+
   function makeId() {
     return (crypto.randomUUID && crypto.randomUUID()) || String(Date.now() + Math.random());
   }
@@ -342,6 +371,15 @@
   function addTask(text) {
     const trimmed = text.trim();
     if (!trimmed) return;
+
+    const isDuplicate = tasks.some(
+      (t) => t.text.toLowerCase() === trimmed.toLowerCase()
+    );
+    if (isDuplicate) {
+      formError.textContent = 'That task is already on your list.';
+      return;
+    }
+    formError.textContent = '';
 
     tasks.push({
       id: makeId(),
@@ -391,7 +429,7 @@
   }
 
   /* ------------------------------------------------------------ */
-  /* Rendering                                                    */
+  /* Rendering                                                      */
   /* ------------------------------------------------------------ */
 
   function createTaskElement(task) {
@@ -451,7 +489,7 @@
   }
 
   /* ------------------------------------------------------------ */
-  /* Events                                                       */
+  /* Events                                                         */
   /* ------------------------------------------------------------ */
 
   taskForm.addEventListener('submit', (e) => {
@@ -459,6 +497,10 @@
     addTask(taskInput.value);
     taskInput.value = '';
     taskInput.focus();
+  });
+
+  taskInput.addEventListener('input', () => {
+    formError.textContent = '';
   });
 
   taskList.addEventListener('click', (e) => {
@@ -524,14 +566,21 @@
       btn.setAttribute('aria-pressed', String(isActive));
     });
 
+    saveFilter();
     render();
   });
 
   clearCompletedBtn.addEventListener('click', clearCompleted);
 
   /* ------------------------------------------------------------ */
-  /* Init                                                         */
+  /* Init                                                           */
   /* ------------------------------------------------------------ */
+
+  filters.querySelectorAll('.filter-btn').forEach((btn) => {
+    const isActive = btn.dataset.filter === currentFilter;
+    btn.classList.toggle('is-active', isActive);
+    btn.setAttribute('aria-pressed', String(isActive));
+  });
 
   render();
 </script>
