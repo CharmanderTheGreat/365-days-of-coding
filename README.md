@@ -95,7 +95,7 @@
 88. [ ] [Network packet visualizer (GUI)](#)
 89. [ ] [Router config backup script](#)
 
-## April — Embedded / IoT (Arduino)
+## December — Embedded / IoT (Arduino)
 90. [ ] [LED blink patterns library](#)
 91. [ ] [Temperature/humidity logger (DHT sensor)](#)
 92. [ ] [Motion-activated alarm system (PIR sensor)](#)
