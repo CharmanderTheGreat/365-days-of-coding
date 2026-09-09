@@ -63,7 +63,7 @@
 58. [ ] [Role-based access control (RBAC) demo](#)
 59. [ ] [API testing suite (pytest)](#)
 
-## March — Cybersecurity & Networking
+## November — Cybersecurity & Networking
 60. [ ] [Port scanner (Python sockets)](#)
 61. [ ] [Packet sniffer (Scapy)](#)
 62. [ ] [Subnet calculator](#)
