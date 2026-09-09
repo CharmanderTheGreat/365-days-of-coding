@@ -1,6 +1,6 @@
 # 365 Days of Code
 
-## January — Web Dev Foundations
+## September — Web Dev Foundations
 1. [X] [Personal portfolio site (HTML/CSS/JS)](https://github.com/CharmanderTheGreat/Personal-portfolio-site--HTML-CSS-JS-.git)
 2. [X] [Responsive navbar component](https://github.com/CharmanderTheGreat/Responsive-navbar-component.git)
 3. [ ] [To-do list app (vanilla JS)](https://github.com/CharmanderTheGreat/To-do-list-app-vanilla-JS-)
