@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="A single-file vanilla JS to-do list app with editing, filtering, and localStorage persistence." />
 <title>To-Do</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -22,6 +23,22 @@
     --radius: 10px;
     --font-display: 'Sora', sans-serif;
     --font-body: 'Inter', sans-serif;
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #16171B;
+    --surface: #202128;
+    --text: #F2F2F0;
+    --text-muted: #9A9AA2;
+    --border: #33343C;
+    --accent: #8579F7;
+    --accent-hover: #9B90FF;
+    --success: #35C97A;
+    --danger: #FF6B6B;
+  }
+
+  body {
+    transition: background-color 150ms ease, color 150ms ease;
   }
 
   * { box-sizing: border-box; }
@@ -50,6 +67,34 @@
 
   .app__header { margin-bottom: 24px; }
 
+  .app__header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .theme-toggle {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: 999px;
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .theme-toggle:hover { border-color: var(--accent); }
+
+  .theme-toggle:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
   .app__title {
     font-family: var(--font-display);
     font-size: 32px;
@@ -77,7 +122,7 @@
     border-radius: var(--radius);
     background: var(--surface);
     font-family: var(--font-body);
-    font-size: 15px;
+    font-size: 16px;
     color: var(--text);
   }
 
@@ -191,6 +236,46 @@
     border-radius: var(--radius);
   }
 
+  .task-item__handle {
+    flex-shrink: 0;
+    color: var(--text-muted);
+    cursor: grab;
+    font-size: 14px;
+    line-height: 1;
+    user-select: none;
+  }
+
+  .task-item--dragging {
+    opacity: 0.4;
+  }
+
+  .task-item--drop-target {
+    border-color: var(--accent);
+  }
+
+  @keyframes taskEnter {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .task-item--enter {
+    animation: taskEnter 180ms ease-out;
+  }
+
+  .task-item--removing {
+    opacity: 0;
+    transform: translateX(8px);
+    transition: opacity 150ms ease, transform 150ms ease;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .task-item--enter,
+    .task-item--removing {
+      animation: none;
+      transition: none;
+    }
+  }
+
   .task-item__checkbox {
     width: 18px;
     height: 18px;
@@ -203,6 +288,7 @@
     flex: 1;
     font-size: 15px;
     word-break: break-word;
+    transition: color 150ms ease;
   }
 
   .task-item--completed .task-item__text {
@@ -247,13 +333,23 @@
   }
 
   .empty-state--visible { display: block; }
+
+  @media (max-width: 420px) {
+    body { padding: 32px 16px; }
+    .app__title { font-size: 26px; }
+    .toolbar { flex-wrap: wrap; }
+    .clear-completed { margin-left: auto; }
+  }
 </style>
 </head>
 <body>
 
   <main class="app">
     <header class="app__header">
-      <h1 class="app__title">To-Do</h1>
+      <div class="app__header-row">
+        <h1 class="app__title">To-Do</h1>
+        <button type="button" class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">🌙</button>
+      </div>
       <p class="app__subtitle" id="taskCounter">No tasks yet</p>
     </header>
 
@@ -295,12 +391,30 @@
 <script>
   'use strict';
 
+  /*
+    To-Do List App — vanilla JS, single file, no dependencies.
+
+    Architecture:
+      - `tasks` (array) is the single source of truth. Every mutation
+        goes through addTask / toggleTask / deleteTask / editTask /
+        clearCompleted, each of which persists then calls render().
+      - render() rebuilds the visible <li> elements from `tasks` +
+        `currentFilter`. The DOM is never read to derive state — it's
+        always state -> DOM, one direction.
+      - One click listener on the list (event delegation) handles
+        every task row, current and future, instead of binding a
+        listener per item.
+      - Two localStorage keys: tasks and the active filter, so a
+        refresh restores exactly where the user left off.
+  */
+
   /* ------------------------------------------------------------ */
   /* Constants / DOM refs                                          */
   /* ------------------------------------------------------------ */
 
   const STORAGE_KEY = 'todo-app:tasks';
   const FILTER_STORAGE_KEY = 'todo-app:filter';
+  const THEME_STORAGE_KEY = 'todo-app:theme';
 
   const taskForm = document.getElementById('taskForm');
   const taskInput = document.getElementById('taskInput');
@@ -310,6 +424,7 @@
   const filters = document.getElementById('filters');
   const clearCompletedBtn = document.getElementById('clearCompletedBtn');
   const formError = document.getElementById('formError');
+  const themeToggle = document.getElementById('themeToggle');
 
   /* ------------------------------------------------------------ */
   /* Data layer                                                     */
@@ -322,6 +437,8 @@
 
   let tasks = loadTasks();
   let currentFilter = loadFilter(); // 'all' | 'active' | 'completed'
+  let lastAddedId = null; // used once by render() to animate the newest item in
+  let draggedId = null; // task id currently being dragged, if any
 
   function loadTasks() {
     try {
@@ -364,6 +481,32 @@
     }
   }
 
+  function loadTheme() {
+    try {
+      const saved = localStorage.getItem(THEME_STORAGE_KEY);
+      if (saved === 'dark' || saved === 'light') return saved;
+    } catch (err) {
+      /* fall through to system preference */
+    }
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+      ? 'dark'
+      : 'light';
+  }
+
+  function applyTheme(theme) {
+    document.documentElement.dataset.theme = theme;
+    themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
+    themeToggle.setAttribute(
+      'aria-label',
+      theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'
+    );
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, theme);
+    } catch (err) {
+      console.error('Failed to save theme to localStorage:', err);
+    }
+  }
+
   function makeId() {
     return (crypto.randomUUID && crypto.randomUUID()) || String(Date.now() + Math.random());
   }
@@ -381,12 +524,14 @@
     }
     formError.textContent = '';
 
-    tasks.push({
+    const newTask = {
       id: makeId(),
       text: trimmed,
       completed: false,
       createdAt: Date.now(),
-    });
+    };
+    tasks.push(newTask);
+    lastAddedId = newTask.id;
 
     saveTasks();
     render();
@@ -422,6 +567,17 @@
     render();
   }
 
+  function reorderTasks(fromId, toId) {
+    const fromIndex = tasks.findIndex((t) => t.id === fromId);
+    const toIndex = tasks.findIndex((t) => t.id === toId);
+    if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return;
+
+    const [moved] = tasks.splice(fromIndex, 1);
+    tasks.splice(toIndex, 0, moved);
+    saveTasks();
+    render();
+  }
+
   function getFilteredTasks() {
     if (currentFilter === 'active') return tasks.filter((t) => !t.completed);
     if (currentFilter === 'completed') return tasks.filter((t) => t.completed);
@@ -435,7 +591,16 @@
   function createTaskElement(task) {
     const li = document.createElement('li');
     li.className = 'task-item' + (task.completed ? ' task-item--completed' : '');
+    if (task.id === lastAddedId) {
+      li.className += ' task-item--enter';
+    }
     li.dataset.id = task.id;
+    li.draggable = true;
+
+    const handle = document.createElement('span');
+    handle.className = 'task-item__handle';
+    handle.textContent = '⠿';
+    handle.setAttribute('aria-hidden', 'true');
 
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
@@ -453,7 +618,7 @@
     deleteBtn.setAttribute('aria-label', `Delete "${task.text}"`);
     deleteBtn.textContent = '✕';
 
-    li.append(checkbox, span, deleteBtn);
+    li.append(handle, checkbox, span, deleteBtn);
     return li;
   }
 
@@ -473,6 +638,7 @@
     const fragment = document.createDocumentFragment();
     visibleTasks.forEach((task) => fragment.appendChild(createTaskElement(task)));
     taskList.appendChild(fragment);
+    lastAddedId = null;
 
     if (tasks.length === 0) {
       emptyState.textContent = 'Nothing here yet. Add your first task above.';
@@ -511,9 +677,24 @@
     if (e.target.matches('.task-item__checkbox')) {
       toggleTask(id);
     } else if (e.target.matches('.task-item__delete')) {
-      deleteTask(id);
+      animateRemoval(li, id);
     }
   });
+
+  function animateRemoval(li, id) {
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      li.removeEventListener('transitionend', finish);
+      deleteTask(id);
+    };
+
+    li.classList.add('task-item--removing');
+    li.addEventListener('transitionend', finish);
+    // Fallback in case the transition never fires (e.g. reduced-motion users).
+    setTimeout(finish, 200);
+  }
 
   taskList.addEventListener('dblclick', (e) => {
     if (!e.target.matches('.task-item__text')) return;
@@ -572,6 +753,49 @@
 
   clearCompletedBtn.addEventListener('click', clearCompleted);
 
+  taskList.addEventListener('dragstart', (e) => {
+    const li = e.target.closest('.task-item');
+    if (!li) return;
+    draggedId = li.dataset.id;
+    li.classList.add('task-item--dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', draggedId);
+  });
+
+  taskList.addEventListener('dragover', (e) => {
+    if (!draggedId) return;
+    e.preventDefault(); // required to allow a drop
+    e.dataTransfer.dropEffect = 'move';
+
+    const li = e.target.closest('.task-item');
+    taskList.querySelectorAll('.task-item--drop-target').forEach((el) => {
+      if (el !== li) el.classList.remove('task-item--drop-target');
+    });
+    if (li && li.dataset.id !== draggedId) {
+      li.classList.add('task-item--drop-target');
+    }
+  });
+
+  taskList.addEventListener('drop', (e) => {
+    e.preventDefault();
+    const li = e.target.closest('.task-item');
+    if (li && draggedId && li.dataset.id !== draggedId) {
+      reorderTasks(draggedId, li.dataset.id);
+    }
+  });
+
+  taskList.addEventListener('dragend', () => {
+    taskList.querySelectorAll('.task-item--dragging, .task-item--drop-target').forEach((el) => {
+      el.classList.remove('task-item--dragging', 'task-item--drop-target');
+    });
+    draggedId = null;
+  });
+
+  themeToggle.addEventListener('click', () => {
+    const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    applyTheme(next);
+  });
+
   /* ------------------------------------------------------------ */
   /* Init                                                           */
   /* ------------------------------------------------------------ */
@@ -582,6 +806,7 @@
     btn.setAttribute('aria-pressed', String(isActive));
   });
 
+  applyTheme(loadTheme());
   render();
 </script>
 </body>
