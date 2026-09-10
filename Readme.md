@@ -4,7 +4,7 @@ A single-file, dependency-free to-do list app. Part of my [365 Days of
 Coding](#) challenge — built to be genuinely usable, not just a checkbox
 demo.
 
-**[Live demo](#)** — replace with your GitHub Pages link after deploying.
+**[Live demo](https://charmanderthegreat.github.io/To-do-list-app-vanilla-JS-/)**
 
 ## Features
 
