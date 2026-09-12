@@ -4,7 +4,7 @@
 1. [X] [Personal portfolio site (HTML/CSS/JS)](https://github.com/CharmanderTheGreat/Personal-portfolio-site--HTML-CSS-JS-.git)
 2. [X] [Responsive navbar component](https://github.com/CharmanderTheGreat/Responsive-navbar-component.git)
 3. [ ] [To-do list app (vanilla JS)](https://github.com/CharmanderTheGreat/To-do-list-app-vanilla-JS-)
-4. [ ] [Markdown-to-HTML converter](#)
+4. [ ] [Markdown-to-HTML converter](https://github.com/CharmanderTheGreat/-Markdown-to-HTML-converter.git)
 5. [ ] [CSS Grid photo gallery](#)
 6. [ ] [Landing page clone (practice)](#)
 7. [ ] [Form validation library](#)
