@@ -3,7 +3,7 @@
 My personal portfolio website — built with plain HTML, CSS, and
 JavaScript, no frameworks or build tools.
 
-**[Live site](#)** 
+**[Live site](https://charmanderthegreat.github.io/Personal-portfolio-site--HTML-CSS-JS-/)** 
 
 ## Features
 
