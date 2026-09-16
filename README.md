@@ -5,7 +5,7 @@
 2. [X] [Responsive navbar component](https://github.com/CharmanderTheGreat/Responsive-navbar-component.git)
 3. [X] [To-do list app (vanilla JS)](https://github.com/CharmanderTheGreat/To-do-list-app-vanilla-JS-)
 4. [X] [Markdown-to-HTML converter](https://github.com/CharmanderTheGreat/-Markdown-to-HTML-converter.git)
-5. [ ] [CSS Grid photo gallery](#)
+5. [ ] [CSS Grid photo gallery](https://github.com/CharmanderTheGreat/CSS-Grid-photo-gallery)
 6. [ ] [Landing page clone (practice)](#)
 7. [ ] [Form validation library](#)
 8. [ ] [Dark mode toggle system](#)
