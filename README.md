@@ -355,5 +355,3 @@
 330. [ ] [Personal finance tracker with bank statement parser (CSV)](#)
 
 ---
-
-Hindi kailangan sunod-sunuran — pumili ka base sa mood mo. Yung mga malalaking project (capstones, ML, embedded), hatiin mo sa ilang commits (setup → feature → tests) para mas madami ring commits sa streak mo.
