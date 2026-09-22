@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>md→html</title>
+<style>
+:root {
+  --bg: #1a1c22;
+  --bg-panel: #21242c;
+  --bg-input: #191b21;
+  --line: #333744;
+  --text: #e4e2db;
+  --text-dim: #8b8e9c;
+  --accent: #e8a33d;
+  --accent-dim: #b3812f;
+  --code-bg: #262a34;
+  --font-mono: "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ---------- Top bar ---------- */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1.25rem;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+
+.brand-mark {
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+  color: var(--text);
+}
+
+.brand-arrow {
+  color: var(--accent);
+  padding: 0 0.1rem;
+}
+
+.topbar-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  padding: 0.45rem 0.8rem;
+  border-radius: 3px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.btn:hover {
+  border-color: var(--text-dim);
+  color: var(--text);
+}
+
+.btn-primary {
+  border-color: var(--accent-dim);
+  color: var(--accent);
+}
+
+.btn-primary:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ---------- Workspace ---------- */
+
+.workspace {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.divider {
+  width: 1px;
+  background: var(--line);
+  flex-shrink: 0;
+}
+
+.pane-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 1.25rem;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--line);
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+
+.pane-toggle {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  padding: 0;
+}
+
+.pane-toggle:hover {
+  color: var(--accent);
+}
+
+#markdownInput {
+  flex: 1;
+  width: 100%;
+  resize: none;
+  border: none;
+  outline: none;
+  background: var(--bg-input);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.92rem;
+  line-height: 1.6;
+  padding: 1.25rem;
+}
+
+#markdownInput::placeholder {
+  color: var(--text-dim);
+  opacity: 0.6;
+}
+
+.preview-output, .source-output {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem 1.5rem;
+  background: var(--bg-panel);
+}
+
+.source-output {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* ---------- Rendered markdown content ---------- */
+
+.preview-output h1, .preview-output h2, .preview-output h3 {
+  font-family: var(--font-mono);
+  color: var(--text);
+  line-height: 1.3;
+  margin: 1.2em 0 0.5em;
+}
+
+.preview-output h1:first-child,
+.preview-output h2:first-child,
+.preview-output h3:first-child { margin-top: 0; }
+
+.preview-output h1 { font-size: 1.6rem; border-bottom: 1px solid var(--line); padding-bottom: 0.3em; }
+.preview-output h2 { font-size: 1.3rem; }
+.preview-output h3 { font-size: 1.1rem; color: var(--text-dim); }
+
+.preview-output p { line-height: 1.7; margin: 0.8em 0; }
+
+.preview-output a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+
+.preview-output strong { color: var(--accent); font-weight: 700; }
+.preview-output em { color: var(--text); font-style: italic; }
+
+.preview-output code {
+  background: var(--code-bg);
+  padding: 0.15em 0.4em;
+  border-radius: 3px;
+  font-size: 0.88em;
+  color: var(--accent);
+}
+
+.preview-output pre {
+  background: var(--code-bg);
+  padding: 1em;
+  border-radius: 4px;
+  overflow-x: auto;
+  border-left: 2px solid var(--accent-dim);
+}
+
+.preview-output pre code {
+  background: none;
+  padding: 0;
+  color: var(--text);
+}
+
+.preview-output blockquote {
+  margin: 0.8em 0;
+  padding: 0.2em 1em;
+  border-left: 2px solid var(--accent-dim);
+  color: var(--text-dim);
+}
+
+.preview-output ul, .preview-output ol {
+  margin: 0.8em 0;
+  padding-left: 1.4em;
+  line-height: 1.7;
+}
+
+.preview-output hr {
+  border: none;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+
+.preview-output img {
+  max-width: 100%;
+  border-radius: 4px;
+}
+
+.preview-empty {
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+/* ---------- Status bar ---------- */
+
+.statusbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 1.25rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.7rem;
+  color: var(--text-dim);
+}
+
+.statusbar-sep { opacity: 0.5; }
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 760px) {
+  .workspace { flex-direction: column; }
+  .divider { width: 100%; height: 1px; }
+  .topbar { flex-wrap: wrap; gap: 0.6rem; }
+  .topbar-actions { flex-wrap: wrap; }
+}
+
+/* Accessibility: visible focus */
+button:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+</style>
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">md<span class="brand-arrow">→</span>html</span>
+    </div>
+    <div class="topbar-actions">
+      <button id="sampleBtn" class="btn btn-ghost">Load sample</button>
+      <button id="clearBtn" class="btn btn-ghost">Clear</button>
+      <button id="copyBtn" class="btn btn-primary">Copy HTML</button>
+      <button id="downloadBtn" class="btn btn-primary">Download .html</button>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <section class="pane pane-input">
+      <div class="pane-label">
+        <span>write.md</span>
+        <span class="pane-meta" id="charCount">0 characters</span>
+      </div>
+      <textarea id="markdownInput" spellcheck="false" placeholder="# Start typing markdown here...
+
+## Try things like:
+**bold**, *italic*, `inline code`
+
+- list item one
+- list item two
+
+> a blockquote
+
+[a link](https://example.com)
+
+```
+a code block
+```
+"></textarea>
+    </section>
+
+    <div class="divider" aria-hidden="true"></div>
+
+    <section class="pane pane-preview">
+      <div class="pane-label">
+        <span>preview</span>
+        <button id="toggleSourceBtn" class="pane-toggle">View HTML source</button>
+      </div>
+      <div id="previewOutput" class="preview-output"></div>
+      <pre id="sourceOutput" class="source-output hidden"><code id="sourceCode"></code></pre>
+    </section>
+  </main>
+
+  <footer class="statusbar">
+    <span id="statusText">Ready</span>
+    <span class="statusbar-sep">·</span>
+    <span>365 days of coding — topic: markdown to html converter</span>
+  </footer>
+
+<script>
+/**
+ * converter.js
+ * A small, dependency-free Markdown -> HTML converter.
+ * Supports: headers, bold, italic, inline code, code blocks,
+ * links, images, blockquotes, unordered/ordered lists, hr, paragraphs.
+ *
+ * This is intentionally written from scratch (no libraries) as part of
+ * the "365 days of coding" challenge — the goal is to understand how a
+ * markdown parser actually works, not just to call one.
+ */
+
+function escapeHtml(str) {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// Handles bold, italic, inline code, links, images within a single line.
+function parseInline(text) {
+  // Inline code first (so its contents don't get mangled by other rules)
+  text = text.replace(/`([^`]+)`/g, (_, code) => `<code>${escapeHtml(code)}</code>`);
+
+  // Images: ![alt](url)
+  text = text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img alt="$1" src="$2">');
+
+  // Links: [text](url)
+  text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+
+  // Bold: **text** or __text__
+  text = text.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  text = text.replace(/__([^_]+)__/g, "<strong>$1</strong>");
+
+  // Italic: *text* or _text_
+  text = text.replace(/\*([^*]+)\*/g, "<em>$1</em>");
+  text = text.replace(/_([^_]+)_/g, "<em>$1</em>");
+
+  return text;
+}
+
+function markdownToHtml(markdown) {
+  const lines = markdown.replace(/\r\n/g, "\n").split("\n");
+  const htmlLines = [];
+
+  let inCodeBlock = false;
+  let codeBlockLines = [];
+  let listType = null; // 'ul' | 'ol' | null
+  let inBlockquote = false;
+  let paragraphLines = [];
+
+  function flushParagraph() {
+    if (paragraphLines.length) {
+      const joined = paragraphLines.join(" ").trim();
+      if (joined) htmlLines.push(`<p>${parseInline(joined)}</p>`);
+      paragraphLines = [];
+    }
+  }
+
+  function closeList() {
+    if (listType) {
+      htmlLines.push(`</${listType}>`);
+      listType = null;
+    }
+  }
+
+  function closeBlockquote() {
+    if (inBlockquote) {
+      htmlLines.push("</blockquote>");
+      inBlockquote = false;
+    }
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    const rawLine = lines[i];
+    const line = rawLine.trim();
+
+    // Fenced code blocks: ```
+    if (/^```/.test(line)) {
+      if (!inCodeBlock) {
+        flushParagraph();
+        closeList();
+        closeBlockquote();
+        inCodeBlock = true;
+        codeBlockLines = [];
+      } else {
+        inCodeBlock = false;
+        htmlLines.push(`<pre><code>${escapeHtml(codeBlockLines.join("\n"))}</code></pre>`);
+      }
+      continue;
+    }
+
+    if (inCodeBlock) {
+      codeBlockLines.push(rawLine);
+      continue;
+    }
+
+    // Blank line ends paragraphs / lists / blockquotes
+    if (line === "") {
+      flushParagraph();
+      closeList();
+      closeBlockquote();
+      continue;
+    }
+
+    // Horizontal rule: ---, ***, ___
+    if (/^(-{3,}|\*{3,}|_{3,})$/.test(line)) {
+      flushParagraph();
+      closeList();
+      closeBlockquote();
+      htmlLines.push("<hr>");
+      continue;
+    }
+
+    // Headers: # through ######
+    const headerMatch = line.match(/^(#{1,6})\s+(.*)$/);
+    if (headerMatch) {
+      flushParagraph();
+      closeList();
+      closeBlockquote();
+      const level = headerMatch[1].length;
+      htmlLines.push(`<h${level}>${parseInline(headerMatch[2])}</h${level}>`);
+      continue;
+    }
+
+    // Blockquote: > text
+    const quoteMatch = line.match(/^>\s?(.*)$/);
+    if (quoteMatch) {
+      flushParagraph();
+      closeList();
+      if (!inBlockquote) {
+        htmlLines.push("<blockquote>");
+        inBlockquote = true;
+      }
+      htmlLines.push(`<p>${parseInline(quoteMatch[1])}</p>`);
+      continue;
+    } else {
+      closeBlockquote();
+    }
+
+    // Unordered list: -, *, +
+    const ulMatch = line.match(/^[-*+]\s+(.*)$/);
+    if (ulMatch) {
+      flushParagraph();
+      if (listType !== "ul") {
+        closeList();
+        htmlLines.push("<ul>");
+        listType = "ul";
+      }
+      htmlLines.push(`<li>${parseInline(ulMatch[1])}</li>`);
+      continue;
+    }
+
+    // Ordered list: 1. text
+    const olMatch = line.match(/^\d+\.\s+(.*)$/);
+    if (olMatch) {
+      flushParagraph();
+      if (listType !== "ol") {
+        closeList();
+        htmlLines.push("<ol>");
+        listType = "ol";
+      }
+      htmlLines.push(`<li>${parseInline(olMatch[1])}</li>`);
+      continue;
+    }
+
+    // Anything else: part of a paragraph
+    closeList();
+    paragraphLines.push(line);
+  }
+
+  // Flush anything left open at end of input
+  flushParagraph();
+  closeList();
+  closeBlockquote();
+  if (inCodeBlock && codeBlockLines.length) {
+    htmlLines.push(`<pre><code>${escapeHtml(codeBlockLines.join("\n"))}</code></pre>`);
+  }
+
+  return htmlLines.join("\n");
+}
+
+// Expose for use in script.js (and for Node-based tests later if wanted)
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { markdownToHtml, parseInline, escapeHtml };
+}
+
+</script>
+<script>
+const markdownInput = document.getElementById("markdownInput");
+const previewOutput = document.getElementById("previewOutput");
+const sourceOutput = document.getElementById("sourceOutput");
+const sourceCode = document.getElementById("sourceCode");
+const charCount = document.getElementById("charCount");
+const statusText = document.getElementById("statusText");
+
+const sampleBtn = document.getElementById("sampleBtn");
+const clearBtn = document.getElementById("clearBtn");
+const copyBtn = document.getElementById("copyBtn");
+const downloadBtn = document.getElementById("downloadBtn");
+const toggleSourceBtn = document.getElementById("toggleSourceBtn");
+
+const SAMPLE_MD = `# Markdown to HTML Converter
+
+Part of my **365 days of coding** challenge.
+
+## Features
+
+- Headers, bold, italic
+- \`inline code\` and fenced code blocks
+- [links](https://github.com) and images
+- Blockquotes and lists
+
+> Built from scratch, no libraries, just to understand how parsing works.
+
+\`\`\`
+function hello() {
+  console.log("hi");
+}
+\`\`\`
+
+---
+
+1. Type markdown on the left
+2. See it rendered on the right
+3. Copy or download the HTML
+`;
+
+let showingSource = false;
+
+function render() {
+  const md = markdownInput.value;
+  charCount.textContent = `${md.length} character${md.length === 1 ? "" : "s"}`;
+
+  if (!md.trim()) {
+    previewOutput.innerHTML = `<p class="preview-empty">Nothing to preview yet — start typing on the left.</p>`;
+    sourceCode.textContent = "";
+    statusText.textContent = "Ready";
+    return;
+  }
+
+  const html = markdownToHtml(md);
+  previewOutput.innerHTML = html;
+  sourceCode.textContent = html;
+  statusText.textContent = "Converted";
+}
+
+markdownInput.addEventListener("input", render);
+
+sampleBtn.addEventListener("click", () => {
+  markdownInput.value = SAMPLE_MD;
+  render();
+  markdownInput.focus();
+});
+
+clearBtn.addEventListener("click", () => {
+  markdownInput.value = "";
+  render();
+  markdownInput.focus();
+});
+
+copyBtn.addEventListener("click", async () => {
+  const html = markdownToHtml(markdownInput.value);
+  try {
+    await navigator.clipboard.writeText(html);
+    statusText.textContent = "HTML copied to clipboard";
+  } catch (err) {
+    statusText.textContent = "Copy failed — select and copy manually from source view";
+  }
+});
+
+downloadBtn.addEventListener("click", () => {
+  const html = markdownToHtml(markdownInput.value);
+  const fullDoc = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Converted document</title>
+</head>
+<body>
+${html}
+</body>
+</html>
+`;
+  const blob = new Blob([fullDoc], { type: "text/html" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "converted.html";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  statusText.textContent = "Downloaded converted.html";
+});
+
+toggleSourceBtn.addEventListener("click", () => {
+  showingSource = !showingSource;
+  previewOutput.classList.toggle("hidden", showingSource);
+  sourceOutput.classList.toggle("hidden", !showingSource);
+  toggleSourceBtn.textContent = showingSource ? "View rendered preview" : "View HTML source";
+});
+
+// Initial render
+render();
+
+</script>
+</body>
+</html>
